@@ -8,7 +8,8 @@ import time
 from pathlib import Path
 
 from prompt_toolkit import prompt
-from prompt_toolkit.print_formatted_text import print_formatted_text, FormattedText  # type: ignore[import-not-found]
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.shortcuts import print_formatted_text
 from prompt_toolkit.styles import Style
 
 from src.config import Config
