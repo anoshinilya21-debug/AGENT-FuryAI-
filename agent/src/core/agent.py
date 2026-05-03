@@ -33,6 +33,8 @@ class CodingAgent:
 4. Save important decisions to memory
 5. Keep code simple and well-documented
 6. When user asks where files are, use the list_files tool to show absolute paths
+7. When user says "on the desktop" / "на рабочем столе", write files to: Desktop/folder_name/
+8. Always mention the FULL absolute path when referring to files
 
 ## Response format:
 - If using a tool: Only output the tool call
@@ -242,12 +244,18 @@ class CodingAgent:
         if os.path.isabs(path):
             filepath = Path(path)
         else:
-            filepath = self.workspace / path
-
-        lower = path.lower()
-        if "desktop" in lower and not os.path.isabs(path):
-            desktop = Path.home() / "Desktop"
-            filepath = desktop / Path(path).name
+            lower = path.lower()
+            if "desktop" in lower or "рабоч" in lower or "стол" in lower:
+                desktop = Path.home() / "Desktop"
+                parts = Path(path).parts
+                for i, p in enumerate(parts):
+                    if p.lower() in ("desktop", "рабочий стол", "рабочий"):
+                        filepath = desktop / Path(*parts[i + 1:])
+                        break
+                else:
+                    filepath = desktop / Path(path).name
+            else:
+                filepath = self.workspace / path
 
         if not filepath.exists():
             return f"Error: File not found: {path}"
@@ -258,18 +266,25 @@ class CodingAgent:
             return f"Error reading file: {e}"
 
     def _write_file(self, path: str, content: str) -> str:
-        # Resolve path: if absolute, use as-is; if relative, use workspace
+        # Resolve path
         if os.path.isabs(path):
             filepath = Path(path)
         else:
-            filepath = self.workspace / path
-
-        # Handle common user paths like Desktop/Documents
-        lower = path.lower()
-        if "desktop" in lower and not os.path.isabs(path):
-            desktop = Path.home() / "Desktop"
-            desktop.mkdir(parents=True, exist_ok=True)
-            filepath = desktop / Path(path).name
+            # Check if path contains desktop/рабочий стол
+            lower = path.lower()
+            if "desktop" in lower or "рабоч" in lower or "стол" in lower:
+                desktop = Path.home() / "Desktop"
+                desktop.mkdir(parents=True, exist_ok=True)
+                # Extract the relative part after desktop mention
+                parts = Path(path).parts
+                for i, p in enumerate(parts):
+                    if p.lower() in ("desktop", "рабочий стол", "рабочий"):
+                        filepath = desktop / Path(*parts[i + 1:])
+                        break
+                else:
+                    filepath = desktop / Path(path).name
+            else:
+                filepath = self.workspace / path
 
         filepath.parent.mkdir(parents=True, exist_ok=True)
 

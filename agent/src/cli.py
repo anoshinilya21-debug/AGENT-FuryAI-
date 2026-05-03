@@ -229,7 +229,7 @@ class OnboardingWizard:
         print_info("Where should FuryAI work?")
         print()
 
-        workspace = input_fury("Path", str(Path.home() / "fury-workspace"))
+        workspace = input_fury("Path", str(Path.home() / "Desktop" / "fury-workspace"))
         print()
         print_ok(f"Workspace set to: {workspace}")
         print()
