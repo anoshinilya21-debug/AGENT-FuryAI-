@@ -52,7 +52,8 @@ def test_update_memory_nonexistent_section(workspace: Path) -> None:
     mm.update_memory("New section", "## Nonexistent Section")
 
     content = (workspace / "MEMORY.md").read_text()
-    assert "## Nonexistent Section" not in content
+    assert "## Nonexistent Section" in content
+    assert "New section" in content
 
 
 def test_truncate_old_entries(workspace: Path) -> None:

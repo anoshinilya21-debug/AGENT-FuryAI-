@@ -1,7 +1,8 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
 from ..llm.openrouter import Message, OpenRouterProvider
 from ..core.memory import MemoryManager
@@ -57,6 +58,8 @@ class CodingAgent:
         self.sandbox = Sandbox(self.workspace / "sandbox")
         self.tools = ToolRegistry()
         self.conversation: List[Message] = []
+        self.on_action: Optional[Callable[[str, Dict[str, Any]], bool]] = None
+        self.on_result: Optional[Callable[[str, Dict[str, Any], str], None]] = None
 
         self._register_default_tools()
 
@@ -119,6 +122,7 @@ class CodingAgent:
 
         last_tool_calls: list[str] = []
         loop_count = 0
+        last_assistant_text: str = ""
 
         for iteration in range(max_iterations):
             response = self.llm.chat(
@@ -127,7 +131,8 @@ class CodingAgent:
             )
 
             if response["content"]:
-                self.conversation.append(Message("assistant", str(response["content"])))
+                last_assistant_text = str(response["content"])
+                self.conversation.append(Message("assistant", last_assistant_text))
 
                 if not response.get("tool_calls"):
                     self.memory.update_memory(
@@ -148,7 +153,27 @@ class CodingAgent:
                     call_sig = f"{func_name}:{json.dumps(func_args, sort_keys=True)}"
                     current_calls.append(call_sig)
 
-                    result = self.tools.execute(func_name, func_args)
+                    if self.on_action and not self.on_action(func_name, func_args):
+                        result = json.dumps(
+                            {"status": "denied", "tool": func_name, "arguments": func_args},
+                            ensure_ascii=False,
+                        )
+                    else:
+                        result = self.tools.execute(func_name, func_args)
+
+                    try:
+                        if self.on_result:
+                            self.on_result(func_name, func_args, result)
+                    except Exception:
+                        # UI callbacks should never break the agent loop
+                        pass
+
+                    # Persist a compact action log into memory
+                    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    self.memory.update_memory(
+                        f"- {ts} `{func_name}` {json.dumps(func_args, ensure_ascii=False)}",
+                        "## Recent Actions",
+                    )
 
                     self.conversation.append(
                         Message(
@@ -171,8 +196,16 @@ class CodingAgent:
             # If we got tool_calls but no text, and this is near the end,
             # consider the task done if tools executed successfully
             if iteration >= max_iterations - 2 and not response["content"]:
+                self.memory.update_memory(
+                    f"- Task: {task[:100]}\n  Status: completed (tools) at iteration {iteration + 1}",
+                    "## Recent Decisions",
+                )
                 return "Task completed (tool execution finished)."
 
+        self.memory.update_memory(
+            f"- Task: {task[:100]}\n  Status: max iterations reached\n  Last: {last_assistant_text[:200]}",
+            "## Lessons Learned",
+        )
         return "Error: Maximum iterations reached without completing the task."
 
     def _read_file(self, path: str) -> str:

@@ -37,13 +37,16 @@ BANNER = r"""
 
 FURY_STYLE = Style.from_dict(
     {
-        "prompt": "bold #00ff41",
-        "error": "#ff0000",
-        "success": "#00ff41",
-        "info": "#888888",
-        "warning": "#ffff00",
-        "banner": "#00ffff",
-        "cyan": "#00ffff",
+        # Modern dark theme (HEX1C base)
+        "": "bg:#1c1c1c #cbd5e1",
+        "prompt": "bold #7dd3fc",
+        "error": "bold #fb7185",
+        "success": "bold #34d399",
+        "info": "#94a3b8",
+        "warning": "bold #fbbf24",
+        "banner": "bold #a78bfa",
+        "cyan": "#7dd3fc",
+        "muted": "#64748b",
     }
 )
 
@@ -433,6 +436,22 @@ class ChatInterface:
         elif command == "/memory":
             self._show_memory()
 
+        elif command == "/remember":
+            note = cmd[len("/remember") :].strip()
+            if not note:
+                print_error("Usage: /remember <something to remember>")
+                return
+            self.agent.memory.update_user(f"- {note}")
+            print_ok("Saved to USER.md")
+
+        elif command == "/note":
+            note = cmd[len("/note") :].strip()
+            if not note:
+                print_error("Usage: /note <memory note>")
+                return
+            self.agent.memory.update_memory(f"- {note}", "## Lessons Learned")
+            print_ok("Saved to MEMORY.md")
+
         elif command == "/skills":
             self._show_skills()
 
@@ -452,6 +471,8 @@ class ChatInterface:
         _print("  Available commands:", "bold")
         _print("    /help     - Show this help", "success")
         _print("    /memory   - Show agent memory", "success")
+        _print("    /remember - Save a user preference/fact", "success")
+        _print("    /note     - Save a memory note/lesson", "success")
         _print("    /skills   - Show learned skills", "success")
         _print("    /status   - Show agent status", "success")
         _print("    /clear    - Clear screen", "success")
@@ -466,9 +487,9 @@ class ChatInterface:
         user = user_file.read_text() if user_file.exists() else "(empty)"
 
         print()
-        border = "-" * 55
-        top = "+" + "-" * 55 + "+"
-        bottom = "+" + "-" * 55 + "+"
+        border = "─" * 55
+        top = "┌" + "─" * 55 + "┐"
+        bottom = "└" + "─" * 55 + "┘"
 
         _print(f"  {top}", "cyan")
         _print(f"  | FuryAI Memory {' ' * 39}|", "cyan")
