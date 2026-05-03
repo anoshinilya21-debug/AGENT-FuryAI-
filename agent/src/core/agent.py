@@ -78,6 +78,13 @@ class CodingAgent:
         )
 
         self.tools.register(
+            name="show_workspace",
+            description="Show absolute workspace and sandbox paths",
+            parameters={"type": "object", "properties": {}, "required": []},
+            handler=lambda: self._show_workspace(),
+        )
+
+        self.tools.register(
             name="write_file",
             description="Write content to a file (creates if not exists)",
             parameters={
@@ -189,6 +196,11 @@ class CodingAgent:
             return f"Successfully wrote {len(content)} bytes to {filepath}"
         except Exception as e:
             return f"Error writing file: {e}"
+
+    def _show_workspace(self) -> str:
+        workspace = self.workspace.resolve()
+        sandbox = (self.workspace / "sandbox").resolve()
+        return f"Workspace: {workspace}\nSandbox: {sandbox}"
 
     def _run_command(self, command: str) -> str:
         return self.sandbox.execute(command)

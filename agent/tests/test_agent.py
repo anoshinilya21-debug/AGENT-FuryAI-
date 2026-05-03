@@ -39,7 +39,7 @@ def test_write_file_tool() -> None:
         agent = CodingAgent(api_key="fake-key", workspace=workspace)
 
         result = agent._write_file("out.txt", "test content")
-        assert "created" in result.lower()
+        assert "wrote" in result.lower()
         assert (workspace / "out.txt").read_text() == "test content"
 
 
