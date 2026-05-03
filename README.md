@@ -1,4 +1,4 @@
-t.me/ccomposter
+[![Telegram](https://img.shields.io/badge/Telegram-26A5E4?logo=telegram&logoColor=white)](https://t.me/ccomposter)
 
 # ⚡ FuryAI
 
