@@ -24,6 +24,7 @@ class CodingAgent:
 - Execute shell commands in a sandbox
 - Search the web for documentation
 - Use git for version control
+- List all workspace files with absolute paths (list_files tool)
 
 ## Rules:
 1. Before writing code, explain your plan
@@ -31,10 +32,12 @@ class CodingAgent:
 3. If a command fails, analyze the error before retrying
 4. Save important decisions to memory
 5. Keep code simple and well-documented
+6. When user asks where files are, use the list_files tool to show absolute paths
 
 ## Response format:
 - If using a tool: Only output the tool call
 - If responding to user: Be concise and technical
+- Always mention the FULL absolute path when referring to files
 """
 
     def __init__(
@@ -101,6 +104,17 @@ class CodingAgent:
                 "required": ["command"],
             },
             handler=self._run_command,
+        )
+
+        self.tools.register(
+            name="list_files",
+            description="List all files in the workspace with absolute paths",
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+            handler=self._list_files,
         )
 
     def run(self, task: str, max_iterations: int = 30) -> str:
@@ -281,3 +295,15 @@ class CodingAgent:
 
     def _run_command(self, command: str) -> str:
         return self.sandbox.execute(command)
+
+    def _list_files(self) -> str:
+        """List all workspace files with absolute paths."""
+        lines = [f"Workspace: {self.workspace.resolve()}"]
+        for f in sorted(self.workspace.rglob("*")):
+            if f.name == "sandbox":
+                continue
+            if f.is_file():
+                lines.append(f"  {f.resolve()}")
+        if len(lines) <= 1:
+            lines.append("  (no files yet)")
+        return "\n".join(lines)
